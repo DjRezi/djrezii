@@ -2,7 +2,8 @@ import requests
 import json
 import pandas as pd
 import streamlit as st
-!pip install scikit-learn
+pip install -U scikit-learn
+
 from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
