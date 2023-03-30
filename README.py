@@ -45,6 +45,3 @@ else:
 
 # Analyze the user every week
 # Code for weekly analysis goes here
-
-https://www.youtube.com/watch?v=JlkfTxG_otA
-Show quoted text
