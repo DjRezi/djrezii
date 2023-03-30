@@ -1,14 +1,15 @@
+!pip install pandas streamlit scikit-learn
+
 import requests
 import json
 import pandas as pd
 import streamlit as st
 
+
 from sklearn.tree import DecisionTreeRegressor
+
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
-
-# install scikit-learn library
-!pip install -U scikit-learn
 
 # download data from USDA's FoodData Central API
 url = 'https://api.nal.usda.gov/fdc/v1/foods/list?pageSize=1000&api_key=a1pqdXRMEE1FHtnOa5TlsPwcM3Op2ybvdDmWbYoo'
