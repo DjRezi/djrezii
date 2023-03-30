@@ -13,8 +13,12 @@ if os.path.exists(model_path):
     with open(model_path, 'rb') as file:
         model = pickle.load(file)
 else:
+    # Display error message if model file is not found
     st.error("Model file not found. Please check that 'model.pkl' exists in the same directory as this script.")
     st.stop()
+
+# Load sample data for demo purposes
+data = pd.read_csv("https://raw.githubusercontent.com/plotly/datasets/master/diabetes.csv")
 
 # Create a form for the user to input their information
 st.title('Diet Recommendation App')
@@ -35,6 +39,15 @@ input_data = pd.DataFrame({
     'Blood Type': [blood_type],
     'Country': [country]
 })
+
+if 'Outcome' in data.columns:
+    X = data.drop('Outcome', axis=1)
+    y = data['Outcome']
+else:
+    X = data.drop('Class', axis=1)
+    y = data['Class']
+    
+model.fit(X, y)
 prediction = model.predict(input_data)
 
 # Display the recommended diet to the user
