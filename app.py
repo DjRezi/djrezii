@@ -6,11 +6,8 @@ from sklearn.tree import DecisionTreeRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error
 
-# Replace YOUR_API_KEY with your actual API key for the USDA's FoodData Central API
-api_key = 'a1pqdXRMEE1FHtnOa5TlsPwcM3Op2ybvdDmWbYoo'
-
 # download data from USDA's FoodData Central API
-url = f'https://api.nal.usda.gov/fdc/v1/foods/list?pageSize=1000&api_key={api_key}'
+url = 'https://api.nal.usda.gov/fdc/v1/foods/list?pageSize=1000&api_key=a1pqdXRMEE1FHtnOa5TlsPwcM3Op2ybvdDmWbYoo'
 response = requests.get(url)
 data = json.loads(response.text)
 
