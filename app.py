@@ -66,3 +66,5 @@ country = st.selectbox('Select your country:', ['United States', 'Canada', 'Unit
 if st.button('Generate Diet Plan'):
     diet_plan = generate_weight_loss_plan(weight, height, age, blood_type, gender, country)
     st.write(diet_plan)
+
+    
