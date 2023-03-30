@@ -8,8 +8,13 @@ import os
 dir_path = os.path.dirname(os.path.abspath(__file__))
 
 # Load the machine learning model
-with open(os.path.join(dir_path, 'model.pkl'), 'rb') as file:
-    model = pickle.load(file)
+model_path = os.path.join(dir_path, 'model.pkl')
+if os.path.exists(model_path):
+    with open(model_path, 'rb') as file:
+        model = pickle.load(file)
+else:
+    st.error("Model file not found. Please check that 'model.pkl' exists in the same directory as this script.")
+    st.stop()
 
 # Create a form for the user to input their information
 st.title('Diet Recommendation App')
