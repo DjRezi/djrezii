@@ -1,47 +1,75 @@
 
-# Import necessary libraries
 import pandas as pd
-from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split, cross_val_score
 from sklearn.tree import DecisionTreeRegressor
+import streamlit as st
 
-# Load the data
-url = "https://people.sc.fsu.edu/~jburkardt/data/csv/hw_200.csv"
-data = pd.read_csv(url, sep=',', header=0, low_memory=False)
+# Load dataset from internet
+url = "https://example.com/fastfood_nutrition.csv"
+try:
+    df = pd.read_csv(url)
+except:
+    st.error("Failed to load data.")
+    df = pd.DataFrame()
 
-# Modify column names to remove quote characters ("")
-data.columns = ['Index', 'Height', 'Weight']
-
-# User input for height and weight
-height = float(input("What is your height in inches? "))
-weight = float(input("What is your weight in pounds? "))
-age = int(input("What is your age? "))
-gender = input("What is your gender (M/F)? ")
-
-# Convert gender to binary (0 or 1)
-if gender == 'M':
-  gender = 1
+# Preprocess data
+if not df.empty:
+    df_preprocessed = df.dropna(how="any", axis=0).reset_index(drop=True)
 else:
-  gender = 0
+    df_preprocessed = pd.DataFrame()
 
-# Create X and y arrays for training
-X = data[['Height', 'Weight']].values
-y = data['Index'].values
+# Sidebar for registration
+registration_status = st.sidebar.checkbox("Register as a new user")
+if registration_status:
+    # Function for registering new user
+    def register_user():
+        st.write("Please fill in the following information to register:")
+        name = st.text_input("Name:")
+        age = st.number_input("Age:", min_value=0, max_value=150)
+        gender = st.selectbox("Gender:", ["Male", "Female"])
+        height = st.number_input("Height (cm):", min_value=0, max_value=250)
+        weight = st.number_input("Weight (kg):", min_value=0, max_value=500)
+        activity_level = st.selectbox("Activity level:", ["Sedentary", "Lightly Active",
+                                                            "Moderately Active", "Very Active"])
+        calories_per_day = st.number_input("Daily calories intake (kcal):", min_value=0, max_value=10000)
+        new_user_data = pd.DataFrame({
+            "name": [name],
+            "age": [age],
+            "gender": [gender],
+            "height": [height],
+            "weight": [weight],
+            "activity_level": [activity_level],
+            "calories_per_day": [calories_per_day]
+        })
+        return new_user_data
 
-# Fit the linear regression and decision tree models
-lr = LinearRegression()
-dt = DecisionTreeRegressor()
-lr.fit(X, y)
-dt.fit(X, y)
+    # Get new user data and write to CSV file
+    new_user_data = register_user()
+    if not df_preprocessed.empty:
+        df_new_user = pd.concat([df_preprocessed, new_user_data])
+        try:
+            df_new_user.to_csv("fastfood_nutrition.csv", index=False)
+        except:
+            st.error("Failed to register user.")
+    else:
+        df_new_user = new_user_data
 
-# Make a prediction for the user using the linear regression and decision tree models
-lr_pred = lr.predict([[height, weight]])
-dt_pred = dt.predict([[height, weight]])
+    # Update preprocessed data with new user data
+    df_preprocessed = df_new_user.drop("index", axis=1)
 
-# Recommend a diet plan based on the prediction
-if lr_pred > dt_pred:
-  print("Based on your information, it is recommended that you follow a low-carb, high-protein diet plan.")
-else:
-  print("Based on your information, it is recommended that you follow a balanced diet plan with moderate amounts of carbohydrates, protein, and fat.")
+# Split into training and testing sets
+if not df_preprocessed.empty:
+    X = df_preprocessed[["Calories", "Total Fat", "Sodium"]]
+    y = df_preprocessed["Protein"]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
 
-# Analyze the user every week
-# Code for weekly analysis goes here
+    # Train decision tree model using cross-validation
+    dt_model = DecisionTreeRegressor(max_depth=3, random_state=42)
+    cv_scores = cross_val_score(dt_model, X_train, y_train, cv=2) # reduce the number of folds to 2
+    mse = -cv_scores.mean()
+
+    # Display model mean squared error
+    st.markdown(f"Model mean squared error: {mse:.2f}")
+
+    # Save model
+
