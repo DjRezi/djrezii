@@ -2,7 +2,7 @@ import requests
 import json
 import pandas as pd
 import streamlit as st
-pip install -U scikit-learn
+pip install scikit-learn
 
 from sklearn.tree import DecisionTreeRegressor
 
