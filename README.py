@@ -2,9 +2,13 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import pickle
+import os
+
+# Get the absolute path of the directory containing this script
+dir_path = os.path.dirname(os.path.abspath(__file__))
 
 # Load the machine learning model
-with open('model.pkl', 'rb') as file:
+with open(os.path.join(dir_path, 'model.pkl'), 'rb') as file:
     model = pickle.load(file)
 
 # Create a form for the user to input their information
