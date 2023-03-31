@@ -1,50 +1,98 @@
 import streamlit as st
+import pandas as pd
+import altair as alt
 
-# Define the Streamlit app title
-st.title("Personal Finance Management App")
+# Define the datasets
+spending_categories = {
+    'Housing': 0.3,
+    'Transportation': 0.15,
+    'Food': 0.1,
+    'Utilities': 0.1,
+    'Insurance': 0.05,
+    'Medical': 0.05,
+    'Savings': 0.05,
+    'Entertainment': 0.05,
+    'Clothing': 0.03,
+    'Miscellaneous': 0.02
+}
 
-# Define the sidebar with user inputs
-st.sidebar.title("User Inputs")
+income_data = pd.DataFrame({
+    'Source': ['Salary', 'Investments', 'Freelance work'],
+    'Amount': [5000, 1000, 2000]
+})
 
-# Define user input fields and retrieve values
-income = st.sidebar.number_input("Enter your monthly income:", min_value=0)
-expenses = st.sidebar.number_input("Enter your monthly expenses:", min_value=0)
-savings_goal = st.sidebar.number_input("Enter your savings goal:", min_value=0)
+expenses_data = pd.DataFrame({
+    'Category': ['Housing', 'Transportation', 'Food', 'Utilities', 'Insurance', 'Medical', 'Savings', 'Entertainment', 'Clothing', 'Miscellaneous'],
+    'Amount': [1500, 750, 500, 500, 250, 250, 250, 250, 150, 100]
+})
 
-# Calculate remaining income and display to user
-remaining_income = income - expenses
-st.write(f"Your remaining income is ${remaining_income} per month.")
+# Define functions
+def generate_spending_chart():
+    chart_data = {key: val * monthly_income for key, val in spending_categories.items()}
+    chart_df = pd.DataFrame.from_dict(chart_data, orient="index", columns=["Amount"])
+    chart_df.reset_index(inplace=True)
+    chart_df.rename(columns={'index': 'Category'}, inplace=True)
 
-# Calculate how long it will take to reach savings goal and display to user
-if remaining_income > 0:
-    months_to_goal = round(savings_goal / remaining_income)
-    st.write(f"At your current rate of saving, it will take you {months_to_goal} months to reach your savings goal.")
-else:
-    st.write("You are not currently saving enough to reach your savings goal.")
+    chart = alt.Chart(chart_df).mark_bar().encode(
+        x='Amount:Q',
+        y=alt.Y('Category:N', sort=list(spending_categories.keys())),
+        color=alt.Color('Category:N', legend=None)
+    ).properties(
+        width=700,
+        height=400,
+        title='Monthly Spending'
+    )
 
-# Create a chart to display income and expenses
-chart_data = {"Income": income, "Expenses": expenses}
-chart_df = pd.DataFrame.from_dict(chart_data, orient="index", columns=["Amount"])
-st.write("## Income vs. Expenses")
-st.bar_chart(chart_df)
+    return chart
 
-# Create a line chart to track savings progress
-savings_data = {"Savings Goal": savings_goal, "Savings Progress": 0}
-savings_df = pd.DataFrame.from_dict(savings_data, orient="index", columns=["Amount"])
-st.write("## Savings Progress")
-savings_chart = st.line_chart(savings_df)
+def generate_income_chart():
+    chart = alt.Chart(income_data).mark_bar().encode(
+        x='Amount:Q',
+        y='Source:N',
+        color=alt.Color('Source:N', legend=None)
+    ).properties(
+        width=700,
+        height=400,
+        title='Monthly Income'
+    )
 
-# Define a button to update savings progress
-if remaining_income > 0:
-    update_button = st.button("Update Savings Progress")
-    if update_button:
-        # Calculate updated savings progress and update chart
-        savings_progress = savings_goal - remaining_income
-        savings_data["Savings Progress"] = savings_progress
-        savings_df = pd.DataFrame.from_dict(savings_data, orient="index", columns=["Amount"])
-        savings_chart = st.line_chart(savings_df)
-        st.success("Savings progress updated successfully!")
-    else:
-        st.write("Click the button to update your savings progress.")
-else:
-    st.write("You are not currently saving enough to update your savings progress.")
+    return chart
+
+def generate_expenses_chart():
+    chart = alt.Chart(expenses_data).mark_bar().encode(
+        x='Amount:Q',
+        y='Category:N',
+        color=alt.Color('Category:N', legend=None)
+    ).properties(
+        width=700,
+        height=400,
+        title='Monthly Expenses'
+    )
+
+    return chart
+
+# Define the app
+def app():
+    st.title("Personal Finance Management")
+
+    monthly_income = st.number_input("What is your monthly income?", value=5000)
+
+    st.subheader("Monthly Breakdown")
+
+    st.altair_chart(generate_spending_chart(), use_container_width=True)
+    st.altair_chart(generate_income_chart(), use_container_width=True)
+    st.altair_chart(generate_expenses_chart(), use_container_width=True)
+
+    st.subheader("Analysis")
+
+    expenses_total = expenses_data['Amount'].sum()
+    savings_total = monthly_income - expenses_total
+
+    st.write("Total Expenses: $", expenses_total)
+    st.write("Total Savings: $", savings_total)
+
+    st.subheader("Tips")
+
+    st.write("- Review your monthly spending and identify areas where you can cut back.")
+    st.write("- Consider setting up automatic savings transfers to help you reach your financial goals.")
+    st.write("- Check your credit score regularly and work to improve it if necessary.")
