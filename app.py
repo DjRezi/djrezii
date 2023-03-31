@@ -1,60 +1,89 @@
 import streamlit as st
 import pandas as pd
-import altair as alt
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-# Load data
-df_budget = pd.read_csv("https://raw.githubusercontent.com/djrezii/Streamlit-Finance-App/master/data/budget_data.csv")
-df_spending = pd.read_csv("https://raw.githubusercontent.com/djrezii/Streamlit-Finance-App/master/data/spending_data.csv")
-df_income = pd.read_csv("https://raw.githubusercontent.com/djrezii/Streamlit-Finance-App/master/data/income_data.csv")
+# Load the budget data
+df_budget = pd.read_csv("budget_data.csv")
 
-# Combine budget and spending data
-df_budget_spending = pd.merge(df_budget, df_spending, on="Category")
-
-# Calculate remaining budget
-df_budget_spending["Remaining"] = df_budget_spending["Budget"] - df_budget_spending["Spending"]
+# Load the S&P 500 data
+df_sp500 = pd.read_csv("sp500_data.csv")
 
 # Set page title
-st.set_page_config(page_title="Personal Finance Management")
+st.set_page_config(page_title="Finance App", page_icon=":money_with_wings:")
 
-# Set app title
-st.title("Personal Finance Management")
+# Set sidebar options
+option = st.sidebar.selectbox('Select an Option', ('Homepage', 'Budget Analysis', 'S&P 500 Analysis'))
 
-# Add subheader for budget
-st.subheader("Budget Overview")
+# Define function to format currency
+def format_currency(amount):
+    return '${:,.2f}'.format(amount)
 
-# Display budget table
-st.write(df_budget)
+# Define function to format percentage
+def format_percentage(amount):
+    return '{:.2f}%'.format(amount)
 
-# Create a chart of budget vs spending
-chart_data = df_budget_spending[["Category", "Budget", "Spending"]].set_index("Category").stack().reset_index()
-chart_data.columns = ["Category", "Budget/Spending", "Amount"]
-chart = alt.Chart(chart_data).mark_bar().encode(
-    x="Category",
-    y="Amount",
-    color="Budget/Spending"
-)
-st.altair_chart(chart, use_container_width=True)
+# Define function to calculate CAGR
+def cagr(dataframe):
+    start_value = dataframe.iloc[0]['Adj Close']
+    end_value = dataframe.iloc[-1]['Adj Close']
+    num_years = len(dataframe) / 252
+    return ((end_value / start_value) ** (1 / num_years)) - 1
 
-# Add subheader for income and spending
-st.subheader("Income and Spending Overview")
+if option == 'Homepage':
 
-# Display income and spending table
-st.write(df_income)
-st.write(df_spending)
+    # Set page title
+    st.title("Finance App")
 
-# Create a chart of income vs spending
-income_spending_data = pd.concat([df_income, df_spending])
-chart_data = income_spending_data[["Category", "Amount", "Type"]].set_index("Category").stack().reset_index()
-chart_data.columns = ["Category", "Type", "Amount"]
-chart = alt.Chart(chart_data).mark_bar().encode(
-    x="Category",
-    y="Amount",
-    color="Type"
-)
-st.altair_chart(chart, use_container_width=True)
+    # Set page subtitle
+    st.write("Welcome to the Finance App! This app provides analysis of personal finance and the stock market.")
 
-# Add subheader for remaining budget
-st.subheader("Remaining Budget by Category")
+    # Display image
+    st.image("https://cdn.pixabay.com/photo/2016/02/19/11/19/stock-exchange-1215676_1280.jpg", use_column_width=True)
 
-# Display remaining budget table
-st.write(df_budget_spending[["Category", "Remaining"]])
+elif option == 'Budget Analysis':
+
+    # Set page title
+    st.title("Budget Analysis")
+
+    # Display budget data
+    st.write("### Monthly Budget Data")
+    st.write(df_budget.style.format({"Income": format_currency, "Expenses": format_currency}))
+
+    # Calculate net income and display
+    net_income = df_budget["Income"].sum() - df_budget["Expenses"].sum()
+    st.write("### Net Income")
+    st.write(format_currency(net_income))
+
+    # Calculate expense breakdown and display
+    st.write("### Expense Breakdown")
+    expense_breakdown = df_budget.groupby("Category")["Expenses"].sum().reset_index().sort_values(by="Expenses", ascending=False)
+    expense_breakdown["% of Total"] = expense_breakdown["Expenses"] / df_budget["Expenses"].sum()
+    expense_breakdown = expense_breakdown.style.format({"Expenses": format_currency, "% of Total": format_percentage})
+    st.write(expense_breakdown)
+
+elif option == 'S&P 500 Analysis':
+
+    # Set page title
+    st.title("S&P 500 Analysis")
+
+    # Display S&P 500 data
+    st.write("### S&P 500 Data")
+    st.write(df_sp500)
+
+    # Calculate and display CAGR
+    cagr_value = cagr(df_sp500)
+    st.write("### CAGR")
+    st.write(format_percentage(cagr_value))
+
+    # Calculate and display annualized standard deviation
+    annualized_std_dev = np.std(df_sp500["Adj Close"].pct_change().dropna()) * np.sqrt(252)
+    st.write("### Annualized Standard Deviation")
+    st.write(format_percentage(annualized_std_dev))
+
+    # Create histogram of daily returns
+    daily_returns = df_sp500["Adj Close"].pct_change().dropna()
+    fig, ax = plt.subplots()
+    sns.histplot(data=daily_returns, ax=ax)
+    ax.set
