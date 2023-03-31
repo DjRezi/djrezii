@@ -1,52 +1,35 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.express as pt
+import requests
+import base64
 
-streamlit
-pandas
-plotly
+def translate(text, target_language, api_key):
+    url = f'https://translation.googleapis.com/language/translate/v2?key={api_key}&q={text}&target={target_language}'
+    response = requests.get(url)
+    translated_text = response.json()['data']['translations'][0]['translatedText']
+    return translated_text
 
-# Load data
-df_portfolio = pd.DataFrame({
-    'Asset': ['AAPL', 'AMZN', 'GOOG', 'NFLX', 'TSLA'],
-    'Allocation': [20, 20, 20, 20, 20]
-})
+def app():
+    st.set_page_config(page_title="Dinolingo", page_icon=":books:", layout="wide")
+    st.title('Dinolingo')
+    st.image('https://i.ibb.co/8s4HkLc/dinolingo-logo.png', use_column_width=True)
+    st.markdown('---')
+    text = st.text_input('Enter text to translate')
+    target_language = st.selectbox('Select target language', ['French', 'Spanish', 'German'])
+    api_key = 'your_api_key_here'
+    if st.button('Translate'):
+        translated_text = translate(text, target_language.lower(), api_key)
+        st.success(translated_text)
+    st.markdown('---')
+    st.subheader('About Dinolingo')
+    st.markdown('Dinolingo is a fun and interactive language learning platform for kids. It provides a wide range of language courses that are designed to be engaging and effective. With Dinolingo, kids can learn new languages through games, videos, songs, and stories. The platform offers courses in French, Spanish, German, and many other languages. Dinolingo is a great way for kids to learn new languages and explore new cultures.')
+    st.markdown('---')
+    st.subheader('Contact Us')
+    st.markdown('Email: info@dinolingo.com')
+    st.markdown('Phone: +1 (123) 456-7890')
+    st.markdown('Address: 123 Main Street, Anytown USA')
 
-df_budget = pd.DataFrame({
-    'Category': ['Housing', 'Transportation', 'Food', 'Utilities', 'Entertainment', 'Other'],
-    'Budgeted_Amount': [1500, 500, 800, 350, 200, 400]
-})
+def get_base64_of_app():
+    return base64.b64encode(app().to_bytes()).decode("utf-8")
 
-df_sp500 = pd.read_csv("sp500_data.csv")
-
-# Sidebar
-st.sidebar.title("Navigation")
-app_mode = st.sidebar.selectbox("Choose the app mode", ["Homepage", "Portfolio", "Budget", "S&P 500"])
-
-# Main app
-st.title("Finance App")
-
-if app_mode == "Homepage":
-    st.write("Welcome to the Finance App! Please select a page on the sidebar.")
-    
-elif app_mode == "Portfolio":
-    st.subheader("Portfolio Allocation")
-    st.write(df_portfolio)
-
-    fig = px.pie(df_portfolio, values='Allocation', names='Asset', title='Portfolio Allocation')
-    st.plotly_chart(fig)
-    
-elif app_mode == "Budget":
-    st.subheader("Monthly Budget")
-    st.write(df_budget)
-
-    fig = px.bar(df_budget, x='Category', y='Budgeted_Amount', title='Monthly Budget')
-    st.plotly_chart(fig)
-    
-elif app_mode == "S&P 500":
-    st.subheader("S&P 500 Data")
-    st.write(df_sp500)
-
-    fig = px.line(df_sp500, x='date', y='close', title='S&P 500 Closing Prices')
-    st.plotly_chart(fig)
+if __name__ == '__main__':
+    st.markdown(f'<iframe src="data:text/html;base64,{get_base64_of_app()}" width="700" height="600"></iframe>', unsafe_allow_html=True)
