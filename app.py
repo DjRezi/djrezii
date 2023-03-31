@@ -1,73 +1,81 @@
-!pip install pandas streamlit scikit-learn
-
-import requests
-import json
-import pandas as pd
 import streamlit as st
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import requests
 
+# Define layout
+st.title("Calorie Tracker")
 
-from sklearn.tree import DecisionTreeRegressor
+# Define form fields
+with st.form(key='my_form'):
+    food_name = st.text_input(label='Enter food name')
+    calories = st.number_input(label='Enter calories')
+    date = st.date_input(label='Enter date')
+    submit_button = st.form_submit_button(label='Submit')
 
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error
+# Load data
+data = pd.DataFrame({
+    'food_name': ['chicken', 'pasta', 'salad'],
+    'calories': [450, 600, 200],
+    'date': ['2022-03-29', '2022-03-30', '2022-03-31']
+})
 
-# download data from USDA's FoodData Central API
-url = 'https://api.nal.usda.gov/fdc/v1/foods/list?pageSize=1000&api_key=a1pqdXRMEE1FHtnOa5TlsPwcM3Op2ybvdDmWbYoo'
-response = requests.get(url)
-data = json.loads(response.text)
+# Convert date column to datetime
+data['date'] = pd.to_datetime(data['date'])
 
-# create dataframe with nutrient values
-foods = []
-for item in data['foods']:
-    nutrients = {}
-    for nutrient in item['foodNutrients']:
-        nutrients[nutrient['nutrientName']] = nutrient['value']
-    nutrients['foodName'] = item['description']
-    foods.append(nutrients)
-df = pd.DataFrame(foods)
+# Filter data by date
+last_week = datetime.now() - timedelta(days=7)
+week_data = data[data['date'] > last_week]
 
-# split data into training and testing sets
-X = df.drop(['foodName', 'Energy'], axis=1)
-y = df['Energy']
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+# Calculate total calories for last week
+total_calories = week_data['calories'].sum()
 
-# train decision tree model
-model = DecisionTreeRegressor()
-model.fit(X_train, y_train)
+# Display total calories for last week
+st.write("Total Calories Consumed Last Week:", total_calories)
 
-# create function to generate weight loss plan
-def generate_weight_loss_plan(weight, height, age, blood_type, gender, country):
-    # lookup nutrient values for user's country and blood type
-    nutrients = df[(df['Country'] == country) & (df['Blood Type'] == blood_type)].mean()
-    nutrients = nutrients.drop(['Country', 'Blood Type', 'Energy'])
+# Calculate recommended daily caloric intake
+gender = st.radio(label="Select your gender", options=["Male", "Female"])
+age = st.number_input(label="Enter your age")
+height = st.number_input(label="Enter your height in cm")
+weight = st.number_input(label="Enter your weight in kg")
+activity_level = st.selectbox(label="Select your activity level", options=["Sedentary", "Lightly Active", "Moderately Active", "Very Active", "Extremely Active"])
+goal = st.radio(label="Select your goal", options=["Lose weight", "Maintain weight", "Gain weight"])
 
-    # create dataframe with user information
-    user = pd.DataFrame({
-        'Weight': [weight],
-        'Height': [height],
-        'Age': [age],
-        'Gender': [gender],
-    })
+if submit_button:
+    # Add new data to dataset
+    new_data = pd.DataFrame({'food_name': [food_name], 'calories': [calories], 'date': [date]})
+    data = pd.concat([data, new_data], ignore_index=True)
 
-    # add user information to dataframe with nutrient values
-    for col in user.columns:
-        nutrients[col] = user[col].values[0]
+    # Calculate total calories for last week
+    last_week = datetime.now() - timedelta(days=7)
+    week_data = data[data['date'] > last_week]
+    total_calories = week_data['calories'].sum()
 
-    # predict daily calorie intake
-    daily_calories = model.predict(nutrients.values.reshape(1, -1))[0]
-    weight_loss_calories = daily_calories - 500  # aim for 1 pound weight loss per week
-    return f'Your recommended daily calorie intake for weight loss is {weight_loss_calories} calories.'
+    # Display total calories for last week
+    st.write("Total Calories Consumed Last Week:", total_calories)
 
-# create web app with Streamlit
-st.title('Weight Loss Diet Generator')
+    # Calculate recommended daily caloric intake
+    if gender == "Male":
+        bmr = 88.36 + (13.4 * weight) + (4.8 * height) - (5.7 * age)
+    else:
+        bmr = 447.6 + (9.2 * weight) + (3.1 * height) - (4.3 * age)
 
-weight = st.number_input('Enter your weight (in kg):')
-height = st.number_input('Enter your height (in cm):')
-age = st.number_input('Enter your age:')
-blood_type = st.selectbox('Select your blood type:', ['A', 'B', 'AB', 'O'])
-gender = st.radio('Select your gender:', ['Male', 'Female'])
-country = st.selectbox('Select your country:', ['United States', 'Canada', 'United Kingdom'])
+    if activity_level == "Sedentary":
+        tdee = bmr * 1.2
+    elif activity_level == "Lightly Active":
+        tdee = bmr * 1.375
+    elif activity_level == "Moderately Active":
+        tdee = bmr * 1.55
+    elif activity_level == "Very Active":
+        tdee = bmr * 1.725
+    else:
+        tdee = bmr * 1.9
 
-if st.button('Generate Diet Plan'):
-    diet_plan = generate_weight_loss_plan(weight, height, age, blood_type, gender, country)
-    st.write(diet_plan)
+    if goal == "Lose weight":
+        daily_calories = tdee - 500
+    elif goal == "Gain weight":
+        daily_calories = tdee + 500
+    else:
+        daily_calories = tdee
+
