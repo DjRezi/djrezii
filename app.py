@@ -1,69 +1,50 @@
 import streamlit as st
-import pandas as pd
-import numpy as np
-from datetime import datetime, timedelta
-import requests
 
-# Define layout
-st.set_page_config(page_title="Calorie Tracker", page_icon=":fork_and_knife:")
-st.title("Calorie Tracker")
+# Define the Streamlit app title
+st.title("Personal Finance Management App")
 
-# Define form fields
-with st.form(key='my_form'):
-    food_name = st.text_input(label='Enter food name')
-    calories = st.number_input(label='Enter calories', min_value=1)
-    date = st.date_input(label='Enter date', value=datetime.today())
-    submit_button = st.form_submit_button(label='Add to tracker')
+# Define the sidebar with user inputs
+st.sidebar.title("User Inputs")
 
-# Load data from CSV or create a new DataFrame
-if 'calories.csv' not in st.session_state:
-    st.session_state['calories.csv'] = pd.DataFrame(columns=['food_name', 'calories', 'date'])
-data = st.session_state['calories.csv']
+# Define user input fields and retrieve values
+income = st.sidebar.number_input("Enter your monthly income:", min_value=0)
+expenses = st.sidebar.number_input("Enter your monthly expenses:", min_value=0)
+savings_goal = st.sidebar.number_input("Enter your savings goal:", min_value=0)
 
-# Add new entry to the DataFrame if form is submitted
-if submit_button:
-    new_entry = pd.DataFrame({'food_name': [food_name], 'calories': [calories], 'date': [date]})
-    data = pd.concat([data, new_entry], ignore_index=True)
-    st.session_state['calories.csv'] = data
+# Calculate remaining income and display to user
+remaining_income = income - expenses
+st.write(f"Your remaining income is ${remaining_income} per month.")
 
-# Filter data by date range
-start_date = st.date_input('Start date', value=(datetime.today() - timedelta(days=6)))
-end_date = st.date_input('End date', value=datetime.today())
-filtered_data = data[(data['date'] >= start_date) & (data['date'] <= end_date)]
-
-# Calculate total calories for date range
-total_calories = filtered_data['calories'].sum()
-
-# Display total calories for date range
-st.subheader(f"Total Calories Consumed from {start_date} to {end_date}:")
-st.write(total_calories)
-
-# Calculate recommended daily caloric intake
-st.header("Calculate Recommended Daily Caloric Intake")
-
-gender = st.selectbox("Select your gender", options=["Male", "Female"])
-age = st.slider("Enter your age", min_value=0, max_value=120, value=25, step=1)
-height = st.slider("Enter your height in cm", min_value=100, max_value=250, value=175, step=1)
-weight = st.slider("Enter your weight in kg", min_value=30, max_value=300, value=70, step=1)
-activity_level = st.selectbox("Select your activity level", options=["Sedentary", "Lightly Active", "Moderately Active", "Very Active", "Extremely Active"])
-goal = st.selectbox("Select your goal", options=["Lose weight", "Maintain weight", "Gain weight"])
-
-if gender == "Male":
-    bmr = 88.36 + (13.4 * weight) + (4.8 * height) - (5.7 * age)
+# Calculate how long it will take to reach savings goal and display to user
+if remaining_income > 0:
+    months_to_goal = round(savings_goal / remaining_income)
+    st.write(f"At your current rate of saving, it will take you {months_to_goal} months to reach your savings goal.")
 else:
-    bmr = 447.6 + (9.2 * weight) + (3.1 * height) - (4.3 * age)
+    st.write("You are not currently saving enough to reach your savings goal.")
 
-if activity_level == "Sedentary":
-    tdee = bmr * 1.2
-elif activity_level == "Lightly Active":
-    tdee = bmr * 1.375
-elif activity_level == "Moderately Active":
-    tdee = bmr * 1.55
-elif activity_level == "Very Active":
-    tdee = bmr * 1.725
+# Create a chart to display income and expenses
+chart_data = {"Income": income, "Expenses": expenses}
+chart_df = pd.DataFrame.from_dict(chart_data, orient="index", columns=["Amount"])
+st.write("## Income vs. Expenses")
+st.bar_chart(chart_df)
+
+# Create a line chart to track savings progress
+savings_data = {"Savings Goal": savings_goal, "Savings Progress": 0}
+savings_df = pd.DataFrame.from_dict(savings_data, orient="index", columns=["Amount"])
+st.write("## Savings Progress")
+savings_chart = st.line_chart(savings_df)
+
+# Define a button to update savings progress
+if remaining_income > 0:
+    update_button = st.button("Update Savings Progress")
+    if update_button:
+        # Calculate updated savings progress and update chart
+        savings_progress = savings_goal - remaining_income
+        savings_data["Savings Progress"] = savings_progress
+        savings_df = pd.DataFrame.from_dict(savings_data, orient="index", columns=["Amount"])
+        savings_chart = st.line_chart(savings_df)
+        st.success("Savings progress updated successfully!")
+    else:
+        st.write("Click the button to update your savings progress.")
 else:
-    tdee = bmr * 1.9
-
-if goal == "Lose weight":
-    daily_calories = tdee - 500
-elif goal
+    st.write("You are not currently saving enough to update your savings progress.")
