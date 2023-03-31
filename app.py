@@ -1,7 +1,11 @@
 import streamlit as st
 import pandas as pd
 import numpy as np
-import plotly.express as px
+import plotly.express as pt
+
+streamlit
+pandas
+plotly
 
 # Load data
 df_portfolio = pd.DataFrame({
