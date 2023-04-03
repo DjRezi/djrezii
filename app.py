@@ -1,15 +1,26 @@
-# Required Libraries
+# Import required libraries
 import matplotlib.pyplot as plt
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 from keras.datasets import mnist
-from keras.layers import Dense, Flatten, Reshape, LeakyReLU
+from keras.layers import Dense, Flatten, Reshape
+from keras.layers.activation import LeakyReLU
 from keras.models import Sequential
 from keras.optimizers import Adam
+import streamlit as st
 
-# Function to build the generator model
-def build_generator(img_shape, zdim):
+# Define image dimensions
+img_rows = 28     
+img_cols = 28
+channels = 1
+img_shape = (img_rows, img_cols, channels)
+
+# Define latent space dimension
+zdim = 100
+
+# Define generator model
+def build_gen(img_shape, zdim):
     model = Sequential()
     model.add(Dense(128, input_dim=zdim))
     model.add(LeakyReLU(alpha=0.01))
@@ -17,8 +28,8 @@ def build_generator(img_shape, zdim):
     model.add(Reshape(img_shape))
     return model
 
-# Function to build the discriminator model
-def build_discriminator(img_shape):
+# Define discriminator model
+def build_dis(img_shape):
     model = Sequential()
     model.add(Flatten(input_shape=img_shape))
     model.add(Dense(128))
@@ -26,42 +37,64 @@ def build_discriminator(img_shape):
     model.add(Dense(1, activation='sigmoid'))
     return model
 
-# Function to build the GAN model
-def build_gan(generator, discriminator):
-    discriminator.trainable = False
+# Define GAN model
+def build_gan(gen, dis):
     model = Sequential()
-    model.add(generator)
-    model.add(discriminator)
+    model.add(gen) 
+    model.add(dis)
     return model
 
-# Function to train the GAN model
-def train_gan(generator, discriminator, gan, iterations, batch_size, interval):
-    # Load the dataset
-    (X_train, _), (_, _) = mnist.load_data()
-    # Rescale the images to the range [-1, 1]
-    X_train = X_train / 127.5 - 1.0
-    X_train = np.expand_dims(X_train, axis=3)
-    # Define the labels for real and fake images
-    real_labels = np.ones((batch_size, 1))
-    fake_labels = np.zeros((batch_size, 1))
-    # Lists to store losses and accuracies for plotting
-    d_losses, g_losses, accuracies, iteration_checks = [], [], [], []
-    # Train the model for the given number of iterations
+# Compile discriminator model
+dis_v = build_dis(img_shape)
+dis_v.compile(loss='binary_crossentropy', optimizer=Adam(), metrics=['accuracy'])
+
+# Compile generator model
+gen_v = build_gen(img_shape, zdim)
+dis_v.trainable = False
+
+# Compile GAN model
+gan_v = build_gan(gen_v, dis_v)
+gan_v.compile(loss='binary_crossentropy', optimizer=Adam())
+
+# Initialize empty lists for losses, accuracies, and iteration checkpoints
+losses = []
+accuracies = []
+iteration_checks = []
+
+# Define training function
+def train(iterations, batch_size, interval):
+    # Load MNIST dataset
+    (Xtrain , _ ), (_,_) = mnist.load_data()
+    Xtrain = Xtrain / 127.5 - 1.0
+    Xtrain = np.expand_dims(Xtrain, axis=3)
+
+    # Define real and fake labels
+    real = np.ones((batch_size, 1))
+    fake = np.zeros((batch_size, 1))
+
     for iteration in range(iterations):
-        # Select a random batch of real images from the dataset
-        ids = np.random.randint(0, X_train.shape[0], batch_size)
-        real_images = X_train[ids]
-        # Generate a batch of fake images from the generator
-        noise = np.random.normal(0, 1, (batch_size, 100))
-        fake_images = generator.predict(noise)
-        # Train the discriminator on the real and fake images
-        d_loss_real = discriminator.train_on_batch(real_images, real_labels)
-        d_loss_fake = discriminator.train_on_batch(fake_images, fake_labels)
-        d_loss = 0.5 * np.add(d_loss_real, d_loss_fake)
-        accuracy = 100 * np.mean(discriminator.predict(real_images) >= 0.5)
+        # Select a random batch of images
+        ids = np.random.randint(0, Xtrain.shape[0], batch_size)
+        imgs = Xtrain[ids]
+
+        # Generate a batch of fake images
+        z = np.random.normal(0, 1, (batch_size, 100))
+        gen_imgs = gen_v.predict(z)
+
+        # Train the discriminator on real and fake images
+        dloss_real = dis_v.train_on_batch(imgs, real)
+        dloss_fake = dis_v.train_on_batch(gen_imgs, fake)
+        dloss, accuracy = 0.5 * np.add(dloss_real, dloss_fake)
+
         # Train the generator by fooling the discriminator
-        noise = np.random.normal(0, 1, (batch_size, 100))
-        g_loss = gan.train_on_batch(noise, real_labels)
-        # Append the losses and accuracies for plotting
+        z = np.random.normal(0, 1, (batch_size, 100))
+        gloss = gan_v.train_on_batch(z, real)
+
+        # Save loss, accuracy, and iteration checkpoint
         if (iteration + 1) % interval == 0:
-           
+            losses.append((dloss, gloss))
+            accuracies.append(100.0 * accuracy)
+            iteration_checks.append(iteration + 1)
+
+            # Display generated images
+            show_images
